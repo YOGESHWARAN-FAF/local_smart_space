@@ -1,23 +1,42 @@
 workflows:
-  android-build:
-    name: Android build
+  react-native-android:
+    name: React Native — Android
+    max_build_duration: 60
     environment:
-      node: "latest"
+      node: "lts/*"
       java: openjdk11
+      os: ubuntu-22.04
     scripts:
       - name: Install dependencies
         script: |
           npm ci
-      - name: Sync Capacitor
+
+      - name: Install Android SDK licenses
         script: |
-          npx cap sync android || true
-      - name: Build Android (Gradle)
+          yes | sdkmanager --licenses || true
+
+      - name: Build Android (release)
         script: |
           cd android
           ./gradlew assembleRelease
+
     artifacts:
       - android/app/build/outputs/**/*.apk
-    publishing:
-      email:
-        recipients: []
-  # touched: 2025-12-09T15:00:00Z - CI trigger
+
+  # Optional: iOS workflow (uncomment and run on macOS runners when needed)
+  # react-native-ios:
+  #   name: React Native — iOS
+  #   environment:
+  #     node: "lts/*"
+  #     cocoapods: default
+  #     os: macos-13.0
+  #   scripts:
+  #     - name: Install dependencies
+  #       script: |
+  #         npm ci
+  #     - name: Install Pods
+  #       script: |
+  #         cd ios && pod install --repo-update
+  #     - name: Build iOS (archive)
+  #       script: |
+  #         xcodebuild -workspace ios/YourApp.xcworkspace -scheme YourApp -configuration Release -sdk iphoneos -archivePath $PWD/build/YourApp.xcarchive archive
