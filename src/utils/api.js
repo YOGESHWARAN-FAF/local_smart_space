@@ -1,27 +1,40 @@
 
-
 /**
  * Simple toast notification
+ * Types: success, error, info
  */
-const showToast = (message) => {
+const showToast = (message, type = 'info') => {
   const toast = document.createElement('div');
   toast.innerText = message;
   toast.style.position = 'fixed';
   toast.style.bottom = '20px';
   toast.style.left = '50%';
   toast.style.transform = 'translateX(-50%)';
-  toast.style.backgroundColor = 'rgba(0,0,0,0.7)';
-  toast.style.color = 'white';
   toast.style.padding = '10px 20px';
   toast.style.borderRadius = '5px';
   toast.style.zIndex = '10000';
   toast.style.transition = 'opacity 0.5s';
+  toast.style.color = 'white';
+  toast.style.fontWeight = '500';
+
+  // Type-based styling
+  if (type === 'success') {
+    toast.style.backgroundColor = '#4CAF50'; // Green
+  } else if (type === 'error') {
+    toast.style.backgroundColor = '#F44336'; // Red
+  } else {
+    toast.style.backgroundColor = 'rgba(0,0,0,0.8)'; // Default dark
+  }
 
   document.body.appendChild(toast);
 
   setTimeout(() => {
     toast.style.opacity = '0';
-    setTimeout(() => document.body.removeChild(toast), 500);
+    setTimeout(() => {
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+      }
+    }, 500);
   }, 3000);
 };
 
@@ -34,8 +47,7 @@ async function safeFetch(url, options = {}) {
     return response;
   } catch (error) {
     console.warn("Network request failed: ", error);
-    showToast("ESP device not connected");
-    // Return a mock response or null to handle downstream
+    showToast("ESP device not connected", "error");
     return null;
   }
 }
@@ -47,34 +59,39 @@ async function safeFetch(url, options = {}) {
 export const checkConnection = async (ip, port) => {
   // Sanitize IP: remove http://, https://, and trailing slashes
   const cleanIP = ip.replace(/^https?:\/\//, '').replace(/\/$/, '');
-  const cleanPort = port.toString().replace(/[^0-9]/g, ''); // Ensure port is just numbers
+  const cleanPort = port.toString().replace(/[^0-9]/g, '');
 
-  const url = `http://${cleanIP}:${cleanPort}/ping`;
+  // Construct URL - ensure http:// is present
+  const baseUrl = `http://${cleanIP}:${cleanPort}`;
+  const url = `${baseUrl}/ping`;
   console.log(`Checking connection to: ${url}`);
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+  const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
 
-  const response = await safeFetch(url, {
-    signal: controller.signal,
-  });
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
 
-  clearTimeout(timeoutId);
+    if (!response.ok) {
+      throw new Error(`HTTP Error: ${response.status}`);
+    }
 
-  if (!response) {
-    throw new Error('Network request failed');
+    const text = await response.text();
+    if (text.trim() !== 'pong') {
+      throw new Error(`Unexpected response: "${text}"`);
+    }
+
+    showToast("Connected Successfully", "success");
+    return true;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    console.error('Connection check failed:', error);
+    showToast(`Connection Failed: ${error.message}`, "error");
+    throw error;
   }
-
-  if (!response.ok) {
-    throw new Error(`HTTP Error: ${response.status}`);
-  }
-
-  const text = await response.text();
-  if (text.trim() !== 'pong') {
-    throw new Error(`Unexpected response: "${text}"`);
-  }
-
-  return true;
 };
 
 /**

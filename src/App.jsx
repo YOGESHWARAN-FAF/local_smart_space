@@ -37,8 +37,20 @@ const AnimatedRoutes = () => {
   );
 };
 
+import { Geolocation } from "@capacitor/geolocation";
+
 function App() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        await Geolocation.requestPermissions();
+      } catch (e) {
+        console.log("Location permission error", e);
+      }
+    })();
+  }, []);
 
   return (
     <SmartSpaceProvider>
