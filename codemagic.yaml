@@ -1,52 +1,19 @@
 workflows:
-  ionic-android:
-    name: Ionic — Android
+  capacitor-android-build:
+    name: Build Capacitor Android APK
     max_build_duration: 60
     environment:
-      node: "lts/*"
-      java: openjdk11
-      os: ubuntu-22.04
-    cache:
-      paths:
-        - ~/.npm
+      node: latest
+      npm: latest
+      android: latest
     scripts:
-      - name: Install dependencies
-        script: |
-          npm ci
-
-      - name: Build Ionic web assets
-        script: |
-          npm run build
-
-      - name: Sync Capacitor Android
-        script: |
-          npx cap sync android || true
-
-      - name: Build Android (Gradle)
-        script: |
-          cd android
-          ./gradlew assembleRelease
-
+      - echo "Installing dependencies"
+      - npm install
+      - echo "Building web assets"
+      - npm run build
+      - echo "Syncing Capacitor"
+      - npx cap sync android
+      - echo "Building Android debug APK"
+      - cd android && ./gradlew assembleDebug
     artifacts:
       - android/app/build/outputs/**/*.apk
-
-  # Optional: iOS workflow (uncomment and run on macOS runners when needed)
-  # ionic-ios:
-  #   name: Ionic — iOS
-  #   environment:
-  #     node: "lts/*"
-  #     cocoapods: default
-  #     os: macos-13.0
-  #   scripts:
-  #     - name: Install dependencies
-  #       script: |
-  #         npm ci
-  #     - name: Build web assets
-  #       script: |
-  #         npm run build
-  #     - name: Install Pods
-  #       script: |
-  #         cd ios && pod install --repo-update
-  #     - name: Build iOS (archive)
-  #       script: |
-  #         xcodebuild -workspace ios/App.xcworkspace -scheme App -configuration Release -sdk iphoneos -archivePath $PWD/build/App.xcarchive archive
